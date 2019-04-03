@@ -58,6 +58,10 @@ bot.on('message', message =>{
         var point = Math.floor(Math.random()*(100-1))+1;
         message.channel.send(message.author.username+"擲出了: "+point+"點");
         //console.log(point);
+    }else if(messages[0]=="!Github"){
+        message.channel.send("原始碼:https://github.com/peter6098790/Test-BOT");
+    }else if(messages[0]=="!介紹"){
+        message.channel.send("原始碼:https://github.com/peter6098790/Test-BOT");
     }else{
         return;
     }
@@ -65,4 +69,4 @@ bot.on('message', message =>{
 });
 
 
-bot.login("NTYzMTA0NzY2MzQ4MjMwNjc2.XKUeMw.9E7ZD2kiQbqLQ4asjjPLqEx9IOs");
+
