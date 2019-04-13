@@ -1,11 +1,32 @@
+const botconfig = require("./botconfig.json");
 const Discord = require('discord.js');
-const bot = new Discord.Client();
+const fs = require("fs");
+const bot = new Discord.Client({disableEveryone: true});
+bot.commands = new Discord.Collection();
+let contribution = require("./貢獻值.json");
+
+
+fs.readdir("./commands/", (err, files) => {
+    if(err) console.log(err);
+
+    let jsfile = files.filter(f => f.split(".").pop() === "js")
+    if(jsfile.length <= 0 ){
+        console.log("找不到指令!");
+        return;
+    }
+
+    jsfile.forEach((f, i) => {
+        let props = require(`./commands/${f}`);
+        console.log(`${f} loaded!`);
+        bot.commands.set(props.help.name, props);
+    });
+})
 
 bot.on('ready', () => {
     console.log(`${bot.user.username}已經上線`);
     //修改機器人遊戲狀態(PLAYING, STREAMING, LISTENING, WATCHING)
     //bot.user.setActivity("蠟筆小新", {type: "WATCHING"});
-    bot.user.setActivity("我叫MT");
+    bot.user.setActivity("掛機獎勵測試中");
 });
 //新成員加入or離開伺服器的系統公告
 bot.on('guildMemberAdd', async member => {
@@ -35,7 +56,7 @@ bot.on('channelDelete', async channel => {
 });
 
 
-bot.on('message', message =>{
+bot.on('message', async message =>{
     //bot回話後跳出事件
     if(message.author.bot) return;
 
@@ -52,8 +73,8 @@ bot.on('message', message =>{
     if(message.content.includes("閉嘴")) message.channel.send("你才閉嘴🖕");
     if(message.content === "?") message.channel.send("?");
     if(message.content.includes("我是誰")) message.channel.send("你是"+message.author.username);
-    if(message.content.includes("@Frostwolf#1665"))message.channel.send("萩芳站起來!");
-    if(message.content.includes("@希爾頓#4350")) message.channel.send(message.author.username+"想對你說:請你出去");
+    if(message.content.includes("@Frostwolf"))message.channel.send("萩芳站起來!");
+    if(message.content.includes("@希爾頓")) message.channel.send(message.author.username+"想對你說:請你出去");
     if(message.content.includes("晚餐吃啥")){
         var restroom =['鬲饕','成功牛排','7-11','學餐'];
         var point = Math.floor(Math.random()*(restroom.length));
@@ -74,35 +95,84 @@ bot.on('message', message =>{
             "!disconnect or !leave:讓BOT離開語音頻道"+"\n"
         );
     }
-    // if (message.content === '/join') {
-    //     // Only try to join the sender's voice channel if they are in one themselves
-    //     if (message.member.voiceChannel) {
-    //       message.member.voiceChannel.join()
-    //         .then(connection => { // Connection is an instance of VoiceConnection
-    //           message.reply('I have successfully connected to the channel!');
-    //         })
-    //         .catch(console.log);
-    //     } else {
-    //       message.reply('請先加入語音頻道!');
-    //     }
-    //     const dispatcher = this.connection.playFile('C:/Users/user/Desktop/BOT/node_modules/ffmpeg-binaries/bin/_30163057.m4a');
-    // }
+    
+    //測試中 待模組化
+    if (message.content === '/join123') {
+        if (message.member.voiceChannel) {
+            var voiceChannel = message.member.voiceChannel;
+            voiceChannel.join().then(connection =>{
+                const dispatcher = connection.playFile('./test.mp3');
+                dispatcher.on("end", end => {
+                    voiceChannel.leave();
+                });
+            }).catch(err => console.log(err));
+        } else {
+            message.reply('請先加入語音頻道!');
+        }    
+    }
+    let prefix = botconfig.prefix;
+    let messageArray = message.content.split(" ");
+    let cmd = messageArray[0];
+    let args = messageArray.slice(1);
+
+    let commandfile = bot.commands.get(cmd.slice(prefix.length));
+    if(commandfile) commandfile.run(bot,message,args);
 
     //自定義指令
-    var messages = message.content.split(" ");
-    if(messages[0]=="!roll"){
-        var point = Math.floor(Math.random()*(100-1))+1;
-        message.channel.send(message.author.username+"擲出了: "+point+"點");
-        //console.log(point);
-    }else if(messages[0]=="!Github"){
-        message.channel.send("原始碼:https://github.com/peter6098790/Test-BOT");
-    }else if(messages[0]=="!介紹"){
-        message.channel.send("一個實驗性質的機器人，有想到什麼有趣的功能可以@小菜，但...不一定做得出來");
-    }else{
-        return;
-    }
-
+    // var messages = message.content.split(" ");
+    // if(messages[0]=="!roll"){
+    //     var point = Math.floor(Math.random()*(100-1))+1;
+    //     message.channel.send(message.author.username+"擲出了: "+point+"點");
+    //     //console.log(point);
+    // }else if(messages[0]=="!Github"){
+    //     message.channel.send("原始碼:https://github.com/peter6098790/Test-BOT");
+    // }else if(messages[0]=="!介紹"){
+    //     message.channel.send("一個實驗性質的機器人，有想到什麼有趣的功能可以@小菜，但...不一定做得出來");
+    // }else{
+    //     return;
+    // }
 });
 
-bot.login("");
+// contribution system as Rc
+if(onlineMembers !== "undifine") setInterval(giveContribution , 60000);
+// give user contribution
+function giveContribution(){
+    onlineMembers.forEach(function(uid) {
+        contribution[uid].contribution = contribution[uid].contribution + 1;
+        let curLevel  = contribution[uid].level;
+        let nextLevel = contribution[uid].level * 100;
+        if(nextLevel <= contribution[uid].contribution){
+            contribution[uid].level = curLevel + 1;
+        }
+        fs.writeFile("./貢獻值.json",JSON.stringify(contribution),(err) => {
+            if (err) console.log(err)
+        });
+        console.log(`${uid}'s contribution now is ${contribution[uid].contribution}! & level now is ${contribution[uid].level}`);
+    });
+}
+
+var onlineMembers = [];
+bot.on('voiceStateUpdate', (oldMember, newMember) => {
+    let newUserChannel = newMember.voiceChannel
+    let oldUserChannel = oldMember.voiceChannel
+
+    //User Joins a voice channel
+    if(oldUserChannel === undefined && newUserChannel !== undefined) {
+        onlineMembers[onlineMembers.length]=`${newMember.id}`;
+        if(!contribution[newMember.id]){
+            contribution[newMember.id] = {
+                contribution: 0,
+                level: 1
+            };
+        }
+    } else if(newUserChannel === undefined){
+        function checkLeave(uid){
+            return uid !== oldMember.id;
+        }
+        onlineMembers = onlineMembers.filter(checkLeave);
+        console.log(`${oldMember.user.username} 離開頻道`);
+    }
+});
+
+bot.login(botconfig.token);
 
